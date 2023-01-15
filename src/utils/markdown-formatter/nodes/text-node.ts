@@ -1,4 +1,5 @@
 import Node from "../node.ts";
+import { formatText } from "../utils.ts";
 
 export default class TextNode extends Node {
   private text: string;
@@ -9,8 +10,6 @@ export default class TextNode extends Node {
   }
 
   format(): string {
-    const formattedText = Node.formatText(this.text);
-
-    return formattedText;
+    return formatText(this.text);
   }
 }

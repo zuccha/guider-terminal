@@ -9,6 +9,7 @@ import {
   bold,
 } from "https://deno.land/std@0.105.0/fmt/colors.ts";
 import Node from "../node.ts";
+import { formatText } from "../utils.ts";
 
 type Level = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -30,7 +31,7 @@ export default class HeadingNode extends Node {
   }
 
   format(): string {
-    const formattedText = Node.formatText(this.text);
+    const formattedText = formatText(this.text);
 
     switch (this.level) {
       case 1: {

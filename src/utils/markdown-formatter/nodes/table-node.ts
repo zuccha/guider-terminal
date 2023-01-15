@@ -1,6 +1,6 @@
 import { bold, blue } from "https://deno.land/std@0.105.0/fmt/colors.ts";
 import Node from "../node.ts";
-import { Alignment, pad, padR } from "../utils.ts";
+import { Alignment, formatText, getTextLength, pad, padR } from "../utils.ts";
 
 type Column = {
   header: string;
@@ -22,7 +22,7 @@ enum Border {
   Vertical = "│",
 }
 
-const Padding = 1;
+const PaddingSize = 1;
 
 export default class TableNode extends Node {
   private header: string[] = [];
@@ -53,26 +53,26 @@ export default class TableNode extends Node {
       const header = this.header[i] ?? "";
       const alignment = this.alignments[i] ?? "left";
 
-      columns.push({
-        header,
-        alignment,
-        width: Math.max(
-          Node.getTextLength(header),
-          ...this.rows.map((row) => {
-            const cell = row[i] ?? "";
-            const subcells = cell.split("<br>");
-            return Math.max(
-              ...subcells.map((subcell) => Node.getTextLength(subcell.trim()))
-            );
-          })
-        ),
-      });
+      const width = Math.max(
+        getTextLength(header),
+        ...this.rows.map((row) => {
+          const cell = row[i] ?? "";
+          const subcells = cell.split("<br>");
+          return Math.max(
+            ...subcells.map((subcell) => getTextLength(subcell.trim()))
+          );
+        })
+      );
+
+      columns.push({ header, alignment, width });
     }
 
     const separatorTop =
       Border.TopLeft +
       columns
-        .map((column) => Border.Horizontal.repeat(column.width + 2 * Padding))
+        .map((column) =>
+          Border.Horizontal.repeat(column.width + 2 * PaddingSize)
+        )
         .join(Border.TopMiddle) +
       Border.TopRight +
       "\n";
@@ -80,7 +80,9 @@ export default class TableNode extends Node {
     const separatorMiddle =
       Border.MiddleLeft +
       columns
-        .map((column) => Border.Horizontal.repeat(column.width + 2 * Padding))
+        .map((column) =>
+          Border.Horizontal.repeat(column.width + 2 * PaddingSize)
+        )
         .join(Border.MiddleMiddle) +
       Border.MiddleRight +
       "\n";
@@ -88,12 +90,14 @@ export default class TableNode extends Node {
     const separatorBottom =
       Border.BottomLeft +
       columns
-        .map((column) => Border.Horizontal.repeat(column.width + 2 * Padding))
+        .map((column) =>
+          Border.Horizontal.repeat(column.width + 2 * PaddingSize)
+        )
         .join(Border.BottomMiddle) +
       Border.BottomRight +
       "\n";
 
-    const padding = " ".repeat(Padding);
+    const padding = " ".repeat(PaddingSize);
 
     let formattedTable = "";
 
@@ -102,13 +106,10 @@ export default class TableNode extends Node {
       Border.Vertical +
       columns
         .map((column) => {
-          const formattedText = Node.formatText(
-            padR(
-              column.header,
-              Math.max(column.width - Node.getTextLength(column.header), 0)
-            )
-          );
-          return padding + bold(blue(formattedText)) + padding;
+          const headerLength = getTextLength(column.header);
+          const fill = Math.max(column.width - headerLength, 0);
+          const text = formatText(padR(column.header, fill));
+          return padding + bold(blue(text)) + padding;
         })
         .join(Border.Vertical) +
       Border.Vertical +
@@ -142,13 +143,9 @@ export default class TableNode extends Node {
               subrow
                 .map((cell, i) => {
                   const column = columns[i];
-                  const text = Node.formatText(
-                    pad(
-                      cell,
-                      Math.max(column.width - Node.getTextLength(cell), 0),
-                      column.alignment
-                    )
-                  );
+                  const cellLength = getTextLength(cell);
+                  const fill = Math.max(column.width - cellLength, 0);
+                  const text = formatText(pad(cell, fill, column.alignment));
                   return padding + text + padding;
                 })
                 .join(Border.Vertical) +

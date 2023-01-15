@@ -1,6 +1,6 @@
 import { dim } from "https://deno.land/std@0.105.0/fmt/colors.ts";
 import Node from "../node.ts";
-import { padL } from "../utils.ts";
+import { formatText, padL } from "../utils.ts";
 
 type Item = {
   text: string;
@@ -22,7 +22,7 @@ export default class ListNode extends Node {
   format(): string {
     if (this.type === "unordered") {
       return this.items
-        .map((item) => dim("  - ") + Node.formatText(item.text))
+        .map((item) => dim("  - ") + formatText(item.text))
         .join("\n");
     }
 
@@ -33,7 +33,7 @@ export default class ListNode extends Node {
         const digit = `${index + 1}`;
         return (
           dim(`  ${padL(digit, digits - digit.length)}. `) +
-          Node.formatText(item.text)
+          formatText(item.text)
         );
       })
       .join("\n");
