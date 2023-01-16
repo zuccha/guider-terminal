@@ -14,6 +14,8 @@ export const run = async (): Promise<void> => {
       "collapse-instruction-groups",
       "hide-comments",
       "hide-instruction-id",
+      "hide-optional",
+      "hide-safety",
       "raw",
     ],
     string: ["ignored-rules", "max-width"],
@@ -64,6 +66,8 @@ export const run = async (): Promise<void> => {
     collapseInstructionGroups: flags["collapse-instruction-groups"],
     hideComments: flags["hide-comments"],
     hideInstructionId: flags["hide-instruction-id"],
+    hideOptional: flags["hide-optional"],
+    hideSafety: flags["hide-safety"],
     ignoredRules,
   });
 
