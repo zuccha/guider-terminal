@@ -1,6 +1,13 @@
 import { bold, blue } from "https://deno.land/std@0.105.0/fmt/colors.ts";
-import Node from "../node.ts";
-import { Alignment, formatText, getTextLength, pad, padR } from "../utils.ts";
+import Node, { defaultFormatOptions, FormatOptions } from "../node.ts";
+import {
+  Alignment,
+  breakText,
+  formatText,
+  getTextLength,
+  pad,
+  padR,
+} from "../utils.ts";
 
 type Column = {
   header: string;
@@ -41,7 +48,9 @@ export default class TableNode extends Node {
     this.rows.push(row);
   }
 
-  format(): string {
+  format(partialOptions?: Partial<FormatOptions>): string {
+    const options = { ...defaultFormatOptions, ...partialOptions };
+
     const columnsCount = Math.max(
       this.header.length,
       this.alignments.length,
@@ -65,6 +74,37 @@ export default class TableNode extends Node {
       );
 
       columns.push({ header, alignment, width });
+    }
+
+    const bordersWidth =
+      Border.MiddleLeft.length +
+      Border.Vertical.length * (columns.length - 1) +
+      Border.MiddleRight.length +
+      columns.length * PaddingSize * 2;
+    const tableWidth =
+      columns.reduce((sum, column) => sum + column.width, 0) + bordersWidth;
+    if (options.maxWidth > 0 && tableWidth > options.maxWidth) {
+      const availableWidth = Math.max(options.maxWidth - bordersWidth, 0);
+      const averageWidth = Math.floor(availableWidth / columns.length);
+      let aboveAverageColumnCount = 0;
+      let leftoverWidth = 0;
+
+      for (const column of columns) {
+        if (column.width > averageWidth) {
+          aboveAverageColumnCount++;
+        } else {
+          leftoverWidth += averageWidth - column.width;
+        }
+      }
+
+      const averageLeftoverWidth = Math.floor(
+        leftoverWidth / aboveAverageColumnCount
+      );
+      for (const column of columns) {
+        if (column.width > averageWidth) {
+          column.width = averageWidth + averageLeftoverWidth;
+        }
+      }
     }
 
     const separatorTop =
@@ -99,44 +139,53 @@ export default class TableNode extends Node {
 
     const padding = " ".repeat(PaddingSize);
 
+    const splitSubrows = (row: string[]): string[][] => {
+      const subrows: string[][] = [];
+
+      for (let i = 0; i < columns.length; ++i) {
+        const cell = breakText(row[i] ?? "", columns[i].width, "<br>");
+        const subcells = cell.split("<br>").map((subcell) => subcell.trim());
+        for (let j = 0; j < subcells.length; ++j) {
+          const subcell = subcells[j];
+          if (!subrows[j]) subrows[j] = [];
+          subrows[j][i] = subcell;
+        }
+      }
+
+      for (let j = 0; j < subrows.length; ++j) {
+        for (let i = 0; i < columns.length; ++i) {
+          if (!subrows[j][i]) subrows[j][i] = "";
+        }
+      }
+
+      return subrows;
+    };
+
     let formattedTable = "";
 
     formattedTable += separatorTop;
-    formattedTable +=
-      Border.Vertical +
-      columns
-        .map((column) => {
-          const headerLength = getTextLength(column.header);
-          const fill = Math.max(column.width - headerLength, 0);
-          const text = formatText(padR(column.header, fill));
-          return padding + bold(blue(text)) + padding;
-        })
-        .join(Border.Vertical) +
-      Border.Vertical +
-      "\n";
+    formattedTable += splitSubrows(columns.map((column) => column.header))
+      .map(
+        (subrow) =>
+          Border.Vertical +
+          subrow
+            .map((cell, i) => {
+              const column = columns[i];
+              const headerLength = getTextLength(cell);
+              const fill = Math.max(column.width - headerLength, 0);
+              const text = formatText(padR(cell, fill));
+              return padding + bold(blue(text)) + padding;
+            })
+            .join(Border.Vertical) +
+          Border.Vertical +
+          "\n"
+      )
+      .join("");
     formattedTable += separatorMiddle;
 
     formattedTable += this.rows
       .map((row) => {
-        const subrows: string[][] = [];
-
-        for (let i = 0; i < columns.length; ++i) {
-          const cell = row[i] ?? "";
-          const subcells = cell.split("<br>").map((subcell) => subcell.trim());
-          for (let j = 0; j < subcells.length; ++j) {
-            const subcell = subcells[j];
-            if (!subrows[j]) subrows[j] = [];
-            subrows[j][i] = subcell;
-          }
-        }
-
-        for (let j = 0; j < subrows.length; ++j) {
-          for (let i = 0; i < columns.length; ++i) {
-            if (!subrows[j][i]) subrows[j][i] = "";
-          }
-        }
-
-        return subrows
+        return splitSubrows(row)
           .map(
             (subrow) =>
               Border.Vertical +

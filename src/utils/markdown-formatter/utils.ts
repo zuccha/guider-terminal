@@ -94,7 +94,9 @@ export const breakText = (
 
   chunks = chunks
     .map((chunk) =>
-      typeof chunk === "string" ? chunk.split(/(\s)/g) : [chunk]
+      typeof chunk === "string"
+        ? chunk.split(new RegExp(`( |${separator})`, "g"))
+        : [chunk]
     )
     .flat()
     .filter((chunk) => typeof chunk !== "string" || chunk !== "");
@@ -111,38 +113,46 @@ export const breakText = (
   for (const chunk of chunks) {
     if (typeof chunk === "string") {
       const word = chunk;
-      const last = lines.length - 1;
+      const lastIndex = lines.length - 1;
       const wordLength = getTextLength(word);
-      if (lastLineLength + 1 + wordLength > width) {
-        const strippedFormatting: Formatting["type"][] = [];
-        while (
-          lines[last].length - 1 > 0 &&
-          typeof lines[last][lines[last].length - 1] !== "string"
-        ) {
-          const formatting = lines[last].pop() as Formatting;
-          strippedFormatting.push(formatting.type);
+      if (word === separator || lastLineLength + wordLength > width) {
+        for (const formattingType of [...formattingStack].reverse()) {
+          const last = lines[lastIndex][lines[lastIndex].length - 1];
+          if (
+            last &&
+            typeof last !== "string" &&
+            last.type === formattingType
+          ) {
+            lines[lastIndex].pop();
+          } else {
+            lines[lastIndex].push({ type: formattingType });
+          }
         }
-        const closingFormatting = formattingStack
-          .filter((type) => !strippedFormatting.includes(type))
-          .reverse();
-        lines[last].push(...closingFormatting);
-        lines.push([...formattingStack, word]);
-        lastLineLength = wordLength;
+        lines.push(
+          word === separator ? [...formattingStack] : [...formattingStack, word]
+        );
+        lastLineLength = word === separator ? 0 : wordLength;
       } else {
-        lines[last].push(word);
+        lines[lastIndex].push(word);
         lastLineLength += wordLength;
       }
     } else {
       const formatting = chunk;
+      const lastIndex = lines.length - 1;
       if (formattingStack.includes(formatting.type)) {
         formattingStack = formattingStack.filter(
           (formattingType) => formattingType !== formatting.type
         );
+        const last = lines[lastIndex][lines[lastIndex].length - 1];
+        if (last && typeof last !== "string" && last.type === formatting.type) {
+          lines[lastIndex].pop();
+        } else {
+          lines[lastIndex].push(formatting);
+        }
       } else {
         formattingStack.push(formatting.type);
+        lines[lastIndex].push(formatting);
       }
-      const last = lines.length - 1;
-      lines[last].push(formatting);
     }
   }
 
