@@ -1,5 +1,6 @@
 import {
   bold,
+  green,
   italic,
   strikethrough,
 } from "https://deno.land/std@0.105.0/fmt/colors.ts";
@@ -40,7 +41,7 @@ const breakRegExp = /<br>/g;
 
 export const formatText = (text: string): string => {
   return text
-    .replace(boldAndItalicRegExp, (_, match) => bold(italic(match)))
+    .replace(boldAndItalicRegExp, (_, match) => green(bold(italic(match))))
     .replace(bold1RegExp, (_, match) => bold(match))
     .replace(bold2RegExp, (_, match) => bold(match))
     .replace(italic1RegExp, (_, match) => italic(match))
