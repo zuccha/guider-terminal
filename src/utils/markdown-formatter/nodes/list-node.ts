@@ -1,6 +1,6 @@
 import { dim } from "https://deno.land/std@0.105.0/fmt/colors.ts";
-import Node from "../node.ts";
-import { formatText, padL } from "../utils.ts";
+import Node, { defaultFormatOptions, FormatOptions } from "../node.ts";
+import { breakText, formatText, padL } from "../utils.ts";
 
 type Item = {
   text: string;
@@ -19,10 +19,16 @@ export default class ListNode extends Node {
     this.items.push({ text });
   }
 
-  format(): string {
+  format(partialOptions?: Partial<FormatOptions>): string {
+    const options = { ...defaultFormatOptions, ...partialOptions };
+
     if (this.type === "unordered") {
       return this.items
-        .map((item) => dim("  - ") + formatText(item.text))
+        .map(
+          (item) =>
+            dim("  - ") +
+            formatText(breakText(item.text, options.maxWidth, "\n    "))
+        )
         .join("\n");
     }
 
@@ -33,7 +39,7 @@ export default class ListNode extends Node {
         const digit = `${index + 1}`;
         return (
           dim(`  ${padL(digit, digits - digit.length)}. `) +
-          formatText(item.text)
+          formatText(breakText(item.text, options.maxWidth, "\n     "))
         );
       })
       .join("\n");

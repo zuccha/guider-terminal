@@ -30,12 +30,13 @@ export const pad = (
   return padC(text, padding);
 };
 
-const boldAndItalicRegExp = /\*\*\*([^\*]+)\*\*\*/g;
-const bold1RegExp = /\*\*([^\*]+)\*\*/g;
-const bold2RegExp = /__([^_]+)__/g;
-const italic1RegExp = /\*([^\*]+)\*/g;
-const italic2RegExp = /_([^_]+)_/g;
+const boldAndItalicRegExp = /\*\*\*([^\*]+)\*\*\*/gm;
+const bold1RegExp = /\*\*([^\*]+)\*\*/gm;
+const bold2RegExp = /__([^_]+)__/gm;
+const italic1RegExp = /\*([^\*]+)\*/gm;
+const italic2RegExp = /_([^_]+)_/gm;
 const strikethroughRegExp = /~~([^~]+)~~/g;
+const breakRegExp = /<br>/g;
 
 export const formatText = (text: string): string => {
   return text
@@ -44,7 +45,8 @@ export const formatText = (text: string): string => {
     .replace(bold2RegExp, (_, match) => bold(match))
     .replace(italic1RegExp, (_, match) => italic(match))
     .replace(italic2RegExp, (_, match) => italic(match))
-    .replace(strikethroughRegExp, (_, match) => strikethrough(match));
+    .replace(strikethroughRegExp, (_, match) => strikethrough(match))
+    .replace(breakRegExp, "");
 };
 
 export const getTextLength = (text: string): number => {
@@ -54,5 +56,102 @@ export const getTextLength = (text: string): number => {
     .replace(bold2RegExp, (_, match) => match)
     .replace(italic1RegExp, (_, match) => match)
     .replace(italic2RegExp, (_, match) => match)
-    .replace(strikethroughRegExp, (_, match) => match).length;
+    .replace(strikethroughRegExp, (_, match) => match)
+    .replace(breakRegExp, "").length;
+};
+
+type Formatting = { type: "***" | "**" | "__" | "*" | "_" | "~~" };
+const formattingTypes = ["***", "**", "__", "*", "_", "~~"] as const;
+
+export const breakText = (
+  text: string,
+  width: number,
+  separator = "\n"
+): string => {
+  if (width === 0) {
+    return text;
+  }
+
+  let chunks: (string | Formatting)[] = [text];
+  for (const formattingType of formattingTypes) {
+    const newChunks: (string | Formatting)[] = [];
+
+    for (const chunk of chunks) {
+      if (typeof chunk === "string") {
+        const subchunks = chunk.split(formattingType);
+        newChunks.push(subchunks[0]);
+        for (let i = 1; i < subchunks.length; ++i) {
+          newChunks.push({ type: formattingType });
+          newChunks.push(subchunks[i]);
+        }
+      } else {
+        newChunks.push(chunk);
+      }
+    }
+
+    chunks = newChunks;
+  }
+
+  chunks = chunks
+    .map((chunk) =>
+      typeof chunk === "string" ? chunk.split(/(\s)/g) : [chunk]
+    )
+    .flat()
+    .filter((chunk) => typeof chunk !== "string" || chunk !== "");
+
+  const firstWordIndex = chunks.findIndex((chunk) => typeof chunk === "string");
+  if (firstWordIndex === -1) {
+    return text;
+  }
+
+  const lines: (string | Formatting)[][] = [[]];
+  let lastLineLength = 0;
+  let formattingStack: Formatting["type"][] = [];
+
+  for (const chunk of chunks) {
+    if (typeof chunk === "string") {
+      const word = chunk;
+      const last = lines.length - 1;
+      const wordLength = getTextLength(word);
+      if (lastLineLength + 1 + wordLength > width) {
+        const strippedFormatting: Formatting["type"][] = [];
+        while (
+          lines[last].length - 1 > 0 &&
+          typeof lines[last][lines[last].length - 1] !== "string"
+        ) {
+          const formatting = lines[last].pop() as Formatting;
+          strippedFormatting.push(formatting.type);
+        }
+        const closingFormatting = formattingStack
+          .filter((type) => !strippedFormatting.includes(type))
+          .reverse();
+        lines[last].push(...closingFormatting);
+        lines.push([...formattingStack, word]);
+        lastLineLength = wordLength;
+      } else {
+        lines[last].push(word);
+        lastLineLength += wordLength;
+      }
+    } else {
+      const formatting = chunk;
+      if (formattingStack.includes(formatting.type)) {
+        formattingStack = formattingStack.filter(
+          (formattingType) => formattingType !== formatting.type
+        );
+      } else {
+        formattingStack.push(formatting.type);
+      }
+      const last = lines.length - 1;
+      lines[last].push(formatting);
+    }
+  }
+
+  return lines
+    .map((line) =>
+      line
+        .map((chunk) => (typeof chunk === "string" ? chunk : chunk.type))
+        .join("")
+        .trim()
+    )
+    .join(separator);
 };

@@ -1,10 +1,10 @@
-import Node from "./node.ts";
+import Node, { FormatOptions } from "./node.ts";
 import HeadingNode from "./nodes/heading-node.ts";
 import ListNode from "./nodes/list-node.ts";
 import TableNode from "./nodes/table-node.ts";
 import TextNode from "./nodes/text-node.ts";
 
-const formatMarkdown = (text: string): string => {
+const formatMarkdown = (text: string, options?: FormatOptions): string => {
   const lines = text.split("\n");
 
   const nodes: Node[] = [];
@@ -129,7 +129,7 @@ const formatMarkdown = (text: string): string => {
   finalizeTable();
 
   return nodes
-    .map((node) => node.format())
+    .map((node) => node.format(options))
     .filter((formattedNode) => formattedNode !== "")
     .join("\n\n");
 };

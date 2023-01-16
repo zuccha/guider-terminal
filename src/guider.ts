@@ -16,7 +16,7 @@ export const run = async (): Promise<void> => {
       "hide-instruction-id",
       "raw",
     ],
-    string: ["ignored-rules"],
+    string: ["ignored-rules", "max-width"],
   });
 
   if (!fileName) {
@@ -67,5 +67,7 @@ export const run = async (): Promise<void> => {
     ignoredRules,
   });
 
-  console.log(flags["raw"] ? output : formatMarkdown(output));
+  const maxWidth = Number(flags["max-width"]) || 0;
+
+  console.log(flags["raw"] ? output : formatMarkdown(output, { maxWidth }));
 };

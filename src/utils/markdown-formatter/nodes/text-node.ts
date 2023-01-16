@@ -1,5 +1,5 @@
-import Node from "../node.ts";
-import { formatText } from "../utils.ts";
+import Node, { defaultFormatOptions, FormatOptions } from "../node.ts";
+import { breakText, formatText } from "../utils.ts";
 
 export default class TextNode extends Node {
   private text: string;
@@ -9,7 +9,9 @@ export default class TextNode extends Node {
     this.text = text;
   }
 
-  format(): string {
-    return formatText(this.text);
+  format(partialOptions?: Partial<FormatOptions>): string {
+    const options = { ...defaultFormatOptions, ...partialOptions };
+
+    return formatText(breakText(this.text, options.maxWidth));
   }
 }
