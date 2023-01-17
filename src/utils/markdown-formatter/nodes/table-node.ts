@@ -1,4 +1,4 @@
-import { bold, blue } from "https://deno.land/std@0.105.0/fmt/colors.ts";
+import { bold, blue, dim } from "https://deno.land/std@0.105.0/fmt/colors.ts";
 import Node, { defaultFormatOptions, FormatOptions } from "../node.ts";
 import {
   Alignment,
@@ -139,8 +139,9 @@ export default class TableNode extends Node {
 
     const padding = " ".repeat(PaddingSize);
 
-    const splitSubrows = (row: string[]): string[][] => {
+    const splitSubrows = (row: string[]): [string[][], boolean[][]] => {
       const subrows: string[][] = [];
+      const isComment: boolean[][] = [];
 
       for (let i = 0; i < columns.length; ++i) {
         const cell = breakText(row[i] ?? "", columns[i].width, "<br>");
@@ -149,6 +150,10 @@ export default class TableNode extends Node {
           const subcell = subcells[j];
           if (!subrows[j]) subrows[j] = [];
           subrows[j][i] = subcell;
+          if (!isComment[j]) isComment[j] = [];
+          if (subcell.startsWith("- ")) isComment[j][i] = true;
+          else if (subcell.trim() === "") isComment[j][i] = false;
+          else isComment[j][i] = j === 0 ? false : isComment[j - 1][i];
         }
       }
 
@@ -158,13 +163,13 @@ export default class TableNode extends Node {
         }
       }
 
-      return subrows;
+      return [subrows, isComment];
     };
 
     let formattedTable = "";
 
     formattedTable += separatorTop;
-    formattedTable += splitSubrows(columns.map((column) => column.header))
+    formattedTable += splitSubrows(columns.map((column) => column.header))[0]
       .map(
         (subrow) =>
           Border.Vertical +
@@ -185,17 +190,25 @@ export default class TableNode extends Node {
 
     formattedTable += this.rows
       .map((row) => {
-        return splitSubrows(row)
+        const [subrows, isComment] = splitSubrows(row);
+        return subrows
           .map(
-            (subrow) =>
+            (subrow, j) =>
               Border.Vertical +
               subrow
                 .map((cell, i) => {
                   const column = columns[i];
                   const cellLength = getTextLength(cell);
                   const fill = Math.max(column.width - cellLength, 0);
-                  const text = formatText(pad(cell, fill, column.alignment));
-                  return padding + text + padding;
+                  const text = formatText(
+                    pad(cell, fill, column.alignment).replace(
+                      /\[.+\]/,
+                      (match) => dim(match)
+                    )
+                  );
+                  return isComment[j][i]
+                    ? padding + dim(text) + padding
+                    : padding + text + padding;
                 })
                 .join(Border.Vertical) +
               Border.Vertical +
