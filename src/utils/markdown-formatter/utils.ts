@@ -130,7 +130,9 @@ export const breakText = (
           }
         }
         lines.push(
-          word === separator ? [...formattingStack] : [...formattingStack, word]
+          word === separator
+            ? [...formattingStack.map((type) => ({ type }))]
+            : [...formattingStack.map((type) => ({ type })), word]
         );
         lastLineLength = word === separator ? 0 : wordLength;
       } else {
@@ -153,6 +155,16 @@ export const breakText = (
       } else {
         formattingStack.push(formatting.type);
         lines[lastIndex].push(formatting);
+      }
+    }
+  }
+
+  for (const line of lines) {
+    for (let i = 0; i < line.length; ++i) {
+      const chunk = line[i];
+      if (typeof chunk === "string") {
+        line[i] = chunk.trimStart();
+        break;
       }
     }
   }
