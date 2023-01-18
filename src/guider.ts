@@ -3,7 +3,7 @@ import {
   GenericInstruction,
   Guide,
   parseGuide,
-} from "https://raw.githubusercontent.com/zuccha/guider/1.0.0/mod.ts";
+} from "https://raw.githubusercontent.com/zuccha/guider/0.5.0/mod.ts";
 import formatMarkdown from "./utils/markdown-formatter/formatMarkdown.ts";
 
 export const run = async (): Promise<void> => {
